@@ -1,0 +1,21 @@
+(function(){
+if(window.__oneChatLock)return;window.__oneChatLock=1;
+var API='https://bztigwfnenwosulhxrxo.supabase.co/rest/v1/';
+var KEY='sb_publishable_P76ca2ta_N7PWpA_Wm6lTw__DEzK19l';
+function q(id){return document.getElementById(id)}
+function esc(s){return String(s||'').replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})}
+function clean(s){return String(s||'').toLowerCase().replace(/[^a-z0-9_]/g,'').slice(0,20)}
+function safe(s){return String(s||'').replace(/[,()]/g,'')}
+function prof(){try{return JSON.parse(localStorage.ca_profile||'{}')}catch(e){return {}}}
+function dev(){var p=prof();return p.device_id||localStorage.ca_device_stable||localStorage.ca_device||''}
+async function api(path,params,opt){var u=new URL(API+path);Object.keys(params||{}).forEach(function(k){u.searchParams.set(k,params[k])});var r=await fetch(u,{method:(opt&&opt.method)||'GET',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json',Prefer:'return=representation'},body:opt&&opt.body?JSON.stringify(opt.body):undefined});var t=await r.text();var d=t?JSON.parse(t):null;if(!r.ok)throw Error((d&&d.message)||t||r.statusText);return d}
+function need(){var p=prof();if(!p.device_id||!p.user||!p.name){if(window.show)show('profile');alert('Once profile gir.');throw Error('no profile')}return p}
+function out(msg,ok){var el=q('msgSearchResults')||q('peopleList')||q('msgRequests');if(el)el.innerHTML='<div class="'+(ok?'ok':'warn')+'">'+esc(msg)+'</div>';else alert(msg)}
+window.msgInvite=async function(username){try{need();var res=await api('rpc/room_request_v4',{}, {method:'POST',body:{p_from_device:dev(),p_to_username:clean(username)}});if(res.status==='already_pending'){out('Bu kisiye zaten istek gonderdin. Ikinci istek olusmadi.',true);return}if(res.status==='already_accepted'){out('Bu kisiyle zaten chat acik. Yeni istek olusturulmadi.',true);if(window.cmfOpenChat&&res.room_id)cmfOpenChat(res.room_id,username);return}if(res.status==='accepted'){out('Karsilikli istek tamamlandi. Tek chat acildi.',true);if(window.cmfOpenChat&&res.room_id)cmfOpenChat(res.room_id,username);return}out('Mesaj istegi gonderildi. Ayni kisiye tekrar basarsan ikinci istek olusmaz.',true);if(window.renderMsg)renderMsg()}catch(e){out('Istek gitmedi: '+e.message,false)}};
+window.mvpInviteFromProfile=window.msgInvite;
+window.msgAccept=async function(id,u){try{var res=await api('rpc/room_accept_v3',{}, {method:'POST',body:{p_request_id:id,p_my_device:dev()}});if(window.renderMsg)await renderMsg();if(window.cmfOpenChat&&res.room_id)cmfOpenChat(res.room_id,u||'chat')}catch(e){alert('Kabul olmadi: '+e.message)}};
+async function profileMap(devs){devs=[...new Set(devs.filter(Boolean))];if(!devs.length)return {};var rows=await api('profiles',{device_id:'in.('+devs.map(safe).join(',')+')',select:'device_id,username,display_name,photo_url'});var m={};rows.forEach(function(p){m[p.device_id]=p});return m}
+window.loadChats=async function(){var host=q('msgChats');if(!host)return;try{var d=safe(dev());var rooms=await api('direct_rooms',{or:'(device_a.eq.'+d+',device_b.eq.'+d+')',select:'*',order:'created_at.desc'});var seen={};rooms=rooms.filter(function(r){var other=r.device_a===dev()?r.device_b:r.device_a;if(seen[other])return false;seen[other]=true;return true});if(!rooms.length){host.innerHTML='<div class="warn">Henuz ozel chat yok.</div>';return}var profs=await profileMap(rooms.map(function(r){return r.device_a===dev()?r.device_b:r.device_a}));host.innerHTML='<div class="cmfChatList">'+rooms.map(function(r){var od=r.device_a===dev()?r.device_b:r.device_a,p=profs[od]||{},u=p.username||od,n=p.display_name||u;return '<div class="cmfChat"><div class="cmfAvatar">◇</div><div style="flex:1"><b>'+esc(n)+'</b><br><span class="cmfStatus">@'+esc(u)+' - tek chat</span></div><button class="btn light cmfOpen" onclick="cmfOpenChat(\''+esc(r.id)+'\',\''+esc(u)+'\')">Ac</button></div>'}).join('')+'</div>'}catch(e){host.innerHTML='<div class="bad">Chatler yuklenmedi: '+esc(e.message)+'</div>'}};
+var oldRender=window.renderMsg;
+window.renderMsg=async function(){if(oldRender)await oldRender();if(window.loadChats)await loadChats()};
+})();
