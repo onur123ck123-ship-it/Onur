@@ -1,10 +1,11 @@
 (function(){
-if(window.__googleCafeSyncUI)return;window.__googleCafeSyncUI=1;
-function q(id){return document.getElementById(id)}
-function css(){if(q('gcsStyle'))return;var s=document.createElement('style');s.id='gcsStyle';s.textContent='.gcsBtn{position:fixed;left:16px;bottom:calc(122px + env(safe-area-inset-bottom));z-index:2147482500;border:0;border-radius:999px;background:#075985;color:white;font-weight:1000;padding:13px 16px;box-shadow:0 16px 34px rgba(7,89,133,.28)}.gcsBox{position:fixed;left:14px;right:14px;bottom:calc(178px + env(safe-area-inset-bottom));z-index:2147482501;background:white;border:1px solid #dbeafe;border-radius:22px;padding:12px;box-shadow:0 20px 50px rgba(2,6,23,.22);font-weight:900;color:#0f172a;display:none}@media(max-width:760px){.gcsBtn{left:12px;bottom:calc(108px + env(safe-area-inset-bottom));padding:12px 14px;font-size:13px}.gcsBox{bottom:calc(162px + env(safe-area-inset-bottom))}}';document.head.appendChild(s)}
-function mapVisible(){var m=q('map');if(!m)return false;var st=getComputedStyle(m),r=m.getBoundingClientRect();return st.display!=='none'&&r.width>100&&r.height>100}
-function ensure(){css();var b=q('gcsBtn');if(!b){b=document.createElement('button');b.id='gcsBtn';b.className='gcsBtn';b.textContent='Google kafeleri eşle';b.onclick=sync;document.body.appendChild(b)}var box=q('gcsBox');if(!box){box=document.createElement('div');box.id='gcsBox';box.className='gcsBox';document.body.appendChild(box)}b.style.display=mapVisible()?'block':'none'}
-async function sync(){var box=q('gcsBox');box.style.display='block';box.innerHTML='Google Places üzerinden Çeşme kafeleri alınıyor...';try{var r=await fetch('/api/sync-cesme-cafes',{method:'POST'});var d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||'Senkron olmadı');box.innerHTML='<b>'+d.imported+'</b> cafe eklendi/güncellendi. Harita yenileniyor...';if(window.loadVenues)await loadVenues();setTimeout(function(){box.style.display='none'},3500)}catch(e){box.innerHTML='Google cafe senkronu olmadı: '+e.message+'<br><small>Netlify ortam değişkenine GOOGLE_MAPS_API_KEY eklenmeli.</small>'}}
-var oldShow=window.show;window.show=function(id){if(oldShow)oldShow(id);setTimeout(ensure,150);setTimeout(ensure,700)}
-setTimeout(ensure,1200);setInterval(ensure,1600);
+window.__googleCafeSyncUI=1;
+function off(){
+ var b=document.getElementById('gcsBtn');
+ if(b)b.remove();
+ var x=document.getElementById('gcsBox');
+ if(x)x.remove();
+}
+off();
+setInterval(off,1000);
 })();
