@@ -1,6 +1,7 @@
 (function(){
-function inject(){try{var f=document.getElementById('f');if(!f||!f.contentWindow||!f.contentDocument)return;if(!f.contentWindow.location.pathname.includes('app.html'))return;var d=f.contentDocument;if(d.getElementById('messagesPatchScript'))return;var s=d.createElement('script');s.id='messagesPatchScript';s.src='/messages_patch.js?v=4';d.body.appendChild(s)}catch(e){}}
-window.addEventListener('load',function(){setTimeout(inject,200)});
-var f=document.getElementById('f');if(f)f.addEventListener('load',function(){setTimeout(inject,200)});
-setInterval(inject,1200);
+function add(d,id,src){if(d.getElementById(id))return;var s=d.createElement('script');s.id=id;s.async=false;s.src=src;d.body.appendChild(s)}
+function inject(){try{var f=document.getElementById('f');if(!f||!f.contentWindow||!f.contentDocument)return;if(!f.contentWindow.location.pathname.includes('app.html'))return;var d=f.contentDocument;add(d,'messagesPatchScript','/messages_patch.js?v=6');add(d,'mvpPatchScript','/mvp_patch.js?v=1')}catch(e){}}
+window.addEventListener('load',function(){setTimeout(inject,250)});
+var f=document.getElementById('f');if(f)f.addEventListener('load',function(){setTimeout(inject,250)});
+setInterval(inject,1500);
 })();
