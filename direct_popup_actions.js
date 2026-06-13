@@ -1,0 +1,18 @@
+(function(){
+if(window.__directPopupActions)return;window.__directPopupActions=1;
+var API='https://bztigwfnenwosulhxrxo.supabase.co/rest/v1/';
+var KEY='sb_publishable_P76ca2ta_N7PWpA_Wm6lTw__DEzK19l';
+function esc(s){return String(s||'').replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})}
+function q(id){return document.getElementById(id)}
+function prof(){try{return JSON.parse(localStorage.ca_profile||'{}')}catch(e){return {}}}
+function dev(){var p=prof();return p.device_id||localStorage.ca_device_stable||localStorage.ca_device||''}
+async function rpc(path,body){var r=await fetch(API+path,{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json'},body:JSON.stringify(body||{})});var t=await r.text();var d=t?JSON.parse(t):null;if(!r.ok)throw Error((d&&d.message)||t||r.statusText);return d}
+function need(){var p=prof();if(!p.device_id||!p.user||!p.name){if(window.show)show('profile');alert('Once profile gir.');throw Error('no profile')}return p}
+function findVenue(id){return (window.venues||[]).find(function(v){return v.id===id})||{id:id,name:id}}
+window.popupHere=async function(id){try{need();var v=findVenue(id);window.selected=v;await rpc('rpc/device_checkin_v2',{p_device_id:dev(),p_venue_id:id});if(q('venueInfo'))q('venueInfo').innerHTML='<div class="ok"><b>'+esc(v.name)+'</b> icin Buradayim aktif.</div>';if(window.loadVenues)await window.loadVenues();if(window.loadPeople)await window.loadPeople();alert(v.name+' icin Buradayim aktif.')}catch(e){alert('Buradayim olmadi: '+e.message)}};
+window.popupNotHere=async function(id){try{need();var v=findVenue(id);window.selected=null;await rpc('rpc/leave_venue_v1',{p_device_id:dev()});if(q('venueInfo'))q('venueInfo').innerHTML='<div class="notHereMsg"><b>'+esc(v.name)+'</b> icin artik burada degilsin. Hicbir yer secili degil.</div>';if(q('peopleList'))q('peopleList').innerHTML='';if(window.loadVenues)await window.loadVenues();alert('Artik burada degilsin.')}catch(e){alert('Burda degilim olmadi: '+e.message)}};
+window.popupDetail=function(id){window.selected=findVenue(id);if(window.selectVenue)window.selectVenue(id)};
+(function style(){if(q('directPopupStyle'))return;var s=document.createElement('style');s.id='directPopupStyle';s.textContent='.dpBtn{border:0;border-radius:999px;padding:9px 11px;margin:4px;font-weight:1000}.dpHere{background:#fb923c;color:white}.dpDetail{background:#e0f2fe;color:#075985}.dpLeave{background:#ef4444;color:white}.dpRow{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}';document.head.appendChild(s)})();
+window.loadVenues=async function(){try{window.venues=await rpc('rpc/venues_with_counts',{});var m=window.map||map;if(!m){m=L.map('map').setView([38.315,26.342],12);window.map=m;map=m;L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(m)}m.eachLayer(function(l){if(l instanceof L.Marker)m.removeLayer(l)});window.venues.forEach(function(v){if(!v.lat||!v.lng)return;var icon=window.pinIcon?window.pinIcon(v):undefined;var html='<b>'+esc(v.name)+'</b><br><small>'+esc(v.area||'Cesme')+' - '+esc(v.category||'Mekan')+'</small><br><b>'+Number(v.live_count||0)+' kisi burada</b><div class="dpRow"><button class="dpBtn dpHere" onclick="window.popupHere(\''+esc(v.id)+'\')">Buradayim</button><button class="dpBtn dpDetail" onclick="window.popupDetail(\''+esc(v.id)+'\')">Detaylandir</button><button class="dpBtn dpLeave" onclick="window.popupNotHere(\''+esc(v.id)+'\')">Burda degilim</button></div>';L.marker([v.lat,v.lng],{icon:icon}).addTo(m).bindPopup(html)})}catch(e){alert('Mekanlar yuklenmedi: '+e.message)}};
+setTimeout(function(){if(window.loadVenues)window.loadVenues()},900);
+})();
