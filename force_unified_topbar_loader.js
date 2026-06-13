@@ -1,18 +1,24 @@
 (function(){
 if(window.__forceUnifiedTopbarLoader)return;window.__forceUnifiedTopbarLoader=1;
+function add(d,id,src){
+ if(d.getElementById(id))return;
+ var s=d.createElement('script');
+ s.id=id;
+ s.async=false;
+ s.src=src;
+ d.body.appendChild(s);
+}
 function load(){
  try{
   var f=document.getElementById('f');
   if(!f||!f.contentWindow||!f.contentDocument)return;
   var w=f.contentWindow,d=f.contentDocument;
   if(!w.location.pathname.includes('app.html'))return;
-  if(d.getElementById('mapBrandLocV2'))return;
   try{w.__mapOnlyBrandLocation=0}catch(e){}
-  var s=d.createElement('script');
-  s.id='mapBrandLocV2';
-  s.async=false;
-  s.src='/map_only_brand_location.js?v=2';
-  d.body.appendChild(s);
+  add(d,'mapBrandLocV2','/map_only_brand_location.js?v=2');
+  try{w.__directPopupActions=0}catch(e){}
+  add(d,'directPopupActionsNoGeo','/direct_popup_actions.js?v=2');
+  add(d,'restorePlaceButtonScript','/restore_place_button.js?v=1');
  }catch(e){}
 }
 window.addEventListener('load',function(){setTimeout(load,500)});
