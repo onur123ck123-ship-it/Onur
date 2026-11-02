@@ -1,0 +1,112 @@
+name: Onurspor DLS26 UV kit
+on:
+  push:
+    paths: ['.github/workflows/onurspor-dls26.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate 512x512 PNG with DLS26-style UV zones
+        run: |
+          python3 -m pip install --quiet pillow requests
+          cat > /tmp/make.py <<'PY'
+          from PIL import Image,ImageDraw,ImageFont,ImageOps,ImageEnhance
+          import requests,io,math
+          S=512
+          im=Image.new('RGBA',(S,S),(6,22,64,255))
+          d=ImageDraw.Draw(im)
+          NAVY=(7,27,77,255); DARK=(4,17,51,255); BLUE=(1,121,230,255); CYAN=(13,190,247,255)
+          # DLS26 texture surfaces: torso back upper, torso front center, sleeves, shorts, socks.
+          # All surfaces filled, including seam gutters, to avoid unwanted black patches.
+          d.rectangle((0,0,512,512),fill=NAVY)
+          # Shirt back: keep player number/name region unadorned.
+          d.polygon([(198,0),(430,0),(437,126),(197,126)],fill=(8,32,87))
+          d.polygon([(208,2),(225,2),(250,125),(231,125)],fill=(10,65,137))
+          # Shirt front is laid on its side in DLS26 2026 UV atlases
+          d.polygon([(211,131),(437,130),(442,273),(211,272)],fill=(8,35,100))
+          for x in (270,302,335):
+              d.polygon([(x,131),(x+13,131),(x-38,272),(x-51,272)],fill=BLUE if x==302 else (10,72,148))
+          # surrounding short sleeves
+          for poly in [[(3,0),(191,0),(192,128),(3,128)],[(442,0),(508,0),(509,128),(441,128)],
+                       [(0,135),(185,135),(195,275),(0,275)],[(446,136),(512,137),(512,276),(443,275)]]:
+              d.polygon(poly,fill=(8,32,87))
+          for y in (50,68):
+              d.line([(15,y),(187,y)],fill=CYAN,width=8)
+              d.line([(450,y),(505,y)],fill=CYAN,width=8)
+          # Long-sleeve and stocking sections
+          for a,b in [((4,285),(189,379)),((319,285),(509,379))]:
+              d.rectangle((a[0],a[1],b[0],b[1]),fill=(6,32,89))
+              d.line([(a[0],a[1]+14),(b[0],a[1]+14)],fill=CYAN,width=7)
+              d.line([(a[0],a[1]+28),(b[0],a[1]+28)],fill=BLUE,width=4)
+          # Shorts components
+          d.polygon([(3,384),(239,384),(237,505),(0,505)],fill=(6,26,77))
+          d.polygon([(265,384),(507,384),(512,505),(267,505)],fill=(6,26,77))
+          d.polygon([(31,390),(47,390),(103,503),(88,503)],fill=BLUE)
+          d.polygon([(283,390),(295,390),(361,503),(347,503)],fill=BLUE)
+          d.line([(5,501),(235,501)],fill=CYAN,width=5)
+          d.line([(269,501),(507,501)],fill=CYAN,width=5)
+          # Small utility swatches number colors
+          d.rectangle((475,270,499,293),fill=(243,247,255))
+          d.rectangle((475,298,499,319),fill=(243,247,255))
+          # Font setup
+          font='/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
+          def txt(text,size,fill=(255,255,255,255)):
+              f=ImageFont.truetype(font,size)
+              bb=f.getbbox(text)
+              layer=Image.new('RGBA',(bb[2]-bb[0]+8,bb[3]-bb[1]+8))
+              ImageDraw.Draw(layer).text((4-bb[0],4-bb[1]),text,font=f,fill=fill)
+              return layer
+          # Text rotated because the actual DLS26 shirt-front zone is sideways
+          layer=Image.new('RGBA',(118,170))
+          dl=ImageDraw.Draw(layer)
+          for text,y,size in [('MERCAN KAFE',0,15),('SIFNE',24,20)]:
+              f=ImageFont.truetype(font,size)
+              dl.text((0,y),text,font=f,fill='white')
+          layer=layer.rotate(90,expand=True)
+          layer.thumbnail((78,116),Image.Resampling.LANCZOS)
+          im.alpha_composite(layer,(349,142))
+          # club crest at front chest UV position, rotated 90 degrees
+          crest=Image.new('RGBA',(54,57))
+          cd=ImageDraw.Draw(crest)
+          cd.rounded_rectangle((2,2,50,54),radius=10,fill=(2,18,54),outline=CYAN,width=3)
+          cd.polygon([(9,37),(25,11),(39,37),(26,30)],fill=(245,247,255))
+          cf=ImageFont.truetype(font,8)
+          cd.text((7,41),'ONUR',font=cf,fill='white')
+          crest=crest.rotate(90,expand=True)
+          crest.thumbnail((35,40))
+          im.alpha_composite(crest,(343,210))
+          # portrait image with clipped oval, small and rotated like sponsor (DLS26 UV orientation)
+          try:
+              response=requests.get('https://at.adobe.com/GHVxHP9370Yhf7BS',timeout=30)
+              response.raise_for_status()
+              selfie=Image.open(io.BytesIO(response.content)).convert('RGB')
+              w,h=selfie_size=selfie.size
+              face=selfie.crop((int(w*.30),int(h*.35),int(w*.73),int(h*.78)))
+              face=ImageOps.fit(face,(70,70),method=Image.Resampling.LANCZOS)
+              face=ImageEnhance.Contrast(face).enhance(1.2).convert('RGBA')
+              mask=Image.new('L',(70,70),0)
+              ImageDraw.Draw(mask).ellipse((2,2,68,68),fill=245)
+              face.putalpha(mask)
+              face=face.rotate(90,expand=True).resize((48,48))
+              im.alpha_composite(face,(270,170))
+          except Exception as e: print('Portrait could not load:',e)
+          # number area back left intentionally clean
+          im=im.convert('RGBA')
+          im.save('onurspor-dls-512.png',format='PNG',optimize=True)
+          assert Image.open('onurspor-dls-512.png').size==(512,512)
+          print('DLS26 output created')
+          PY
+          python3 /tmp/make.py
+      - name: Publish kit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add onurspor-dls-512.png
+          if ! git diff --cached --quiet; then
+            git commit -m 'Generate Onurspor DLS26 UV placement kit'
+            git push
+          fi
