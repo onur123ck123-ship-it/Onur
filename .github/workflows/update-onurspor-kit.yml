@@ -1,4 +1,4 @@
-name: Publish Onurspor DLS26 final kit
+name: Publish Onurspor DLS26 latest test kit
 on:
   push:
     paths: ['.github/workflows/update-onurspor-kit.yml']
@@ -10,26 +10,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Download final design and convert faithfully to 512 RGBA
+      - name: Download and resize exact test design
         run: |
-          curl --fail --location --retry 3 --output original.png 'https://at.adobe.com/d0kb6I2oHt59TxdA'
+          curl --fail --location --retry 3 --output original.png 'https://at.adobe.com/z0Yy2ajXPcYTJufk'
           python3 -m pip install --quiet pillow
           python3 - <<'PY'
           from PIL import Image
           im=Image.open('original.png')
-          assert im.width==im.height, im.size
-          im=im.convert('RGBA').resize((512,512),Image.Resampling.LANCZOS)
-          im.save('onurspor-dls-512.png',format='PNG',optimize=True)
-          chk=Image.open('onurspor-dls-512.png')
-          assert chk.size==(512,512) and chk.mode=='RGBA'
-          print('Verified size',chk.size,'RGBA')
+          assert im.width==im.height,im.size
+          im.convert('RGBA').resize((512,512),Image.Resampling.LANCZOS).save('onurspor-dls-512.png',format='PNG')
+          check=Image.open('onurspor-dls-512.png')
+          assert check.size==(512,512) and check.mode=='RGBA'
+          print('Validated 512x512 RGBA PNG')
           PY
-      - name: Commit
+      - name: Publish image
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add onurspor-dls-512.png
           if ! git diff --cached --quiet; then
-            git commit -m 'Update Onurspor kit to latest design'
+            git commit -m 'Publish latest Onurspor DLS26 test kit'
             git push
           fi
