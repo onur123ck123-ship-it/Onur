@@ -1,4 +1,4 @@
-name: Publish Onurspor exact artwork on verified DLS template
+name: Publish Onurspor DLS26 final kit
 on:
   push:
     paths: ['.github/workflows/update-onurspor-kit.yml']
@@ -10,22 +10,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Fetch mapped transparent 512x512 kit
+      - name: Download final design and convert faithfully to 512 RGBA
         run: |
-          curl --fail --location --retry 3 --output onurspor-dls-512.png 'https://at.adobe.com/fw07CiN1v6JymDWH'
+          curl --fail --location --retry 3 --output original.png 'https://at.adobe.com/d0kb6I2oHt59TxdA'
+          python3 -m pip install --quiet pillow
           python3 - <<'PY'
-          import struct
-          data=open('onurspor-dls-512.png','rb').read(30)
-          assert data[:8] == b'\x89PNG\r\n\x1a\n'
-          assert struct.unpack('>II',data[16:24]) == (512,512)
-          print('Verified 512x512 PNG image')
+          from PIL import Image
+          im=Image.open('original.png')
+          assert im.width==im.height, im.size
+          im=im.convert('RGBA').resize((512,512),Image.Resampling.LANCZOS)
+          im.save('onurspor-dls-512.png',format='PNG',optimize=True)
+          chk=Image.open('onurspor-dls-512.png')
+          assert chk.size==(512,512) and chk.mode=='RGBA'
+          print('Verified size',chk.size,'RGBA')
           PY
-      - name: Commit revised kit
+      - name: Commit
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add onurspor-dls-512.png
           if ! git diff --cached --quiet; then
-            git commit -m 'Apply original Onurspor design on DLS official UV layout'
+            git commit -m 'Update Onurspor kit to latest design'
             git push
           fi
