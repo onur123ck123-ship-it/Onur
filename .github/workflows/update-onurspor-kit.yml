@@ -11,17 +11,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          persist-credentials: true
-      - name: Download RGBA PNG
+      - name: Download exact final design
         run: |
-          curl --fail --location --retry 3 --output onurspor-dls-512.png 'https://at.adobe.com/VuG5tIl0QOkNbYIN'
-          file onurspor-dls-512.png
-          test "$(file --mime-type -b onurspor-dls-512.png)" = 'image/png'
+          curl --fail --location --retry 3 --output onurspor-source.png 'https://at.adobe.com/AaqYmnSq9kANiT1M'
+          test "$(file --mime-type -b onurspor-source.png)" = 'image/png'
+      - name: Resize without redesign to RGBA 512x512
+        run: |
+          python3 -m pip install --quiet pillow
+          python3 - <<'PY'
+          from PIL import Image
+          im = Image.open('onurspor-source.png')
+          assert im.width == im.height, im.size
+          im = im.convert('RGBA').resize((512,512), Image.Resampling.LANCZOS)
+          im.save('onurspor-dls-512.png', format='PNG', optimize=True)
+          verify=Image.open('onurspor-dls-512.png')
+          assert verify.size == (512,512) and verify.mode == 'RGBA'
+          print('Validated', verify.size, verify.mode)
+          PY
       - name: Publish
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add onurspor-dls-512.png
-          git commit -m 'Replace kit with standard RGBA PNG' || exit 0
-          git push
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publish exact Onurspor design resized to RGBA 512'
+            git push
+          fi
