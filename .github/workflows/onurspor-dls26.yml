@@ -1,4 +1,4 @@
-name: Onurspor DLS26 UV kit
+name: Fix Onurspor DLS26 UV
 on:
   push:
     paths: ['.github/workflows/onurspor-dls26.yml']
@@ -10,103 +10,86 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Generate 512x512 PNG with DLS26-style UV zones
+      - name: Render mapped kit
         run: |
-          python3 -m pip install --quiet pillow requests
-          cat > /tmp/make.py <<'PY'
-          from PIL import Image,ImageDraw,ImageFont,ImageOps,ImageEnhance
-          import requests,io,math
+          pip -q install pillow requests
+          cat > /tmp/render.py <<'PY'
+          from PIL import Image, ImageDraw, ImageFont,ImageOps,ImageEnhance
+          import requests,io
           S=512
-          im=Image.new('RGBA',(S,S),(6,22,64,255))
-          d=ImageDraw.Draw(im)
-          NAVY=(7,27,77,255); DARK=(4,17,51,255); BLUE=(1,121,230,255); CYAN=(13,190,247,255)
-          # DLS26 texture surfaces: torso back upper, torso front center, sleeves, shorts, socks.
-          # All surfaces filled, including seam gutters, to avoid unwanted black patches.
-          d.rectangle((0,0,512,512),fill=NAVY)
-          # Shirt back: keep player number/name region unadorned.
-          d.polygon([(198,0),(430,0),(437,126),(197,126)],fill=(8,32,87))
-          d.polygon([(208,2),(225,2),(250,125),(231,125)],fill=(10,65,137))
-          # Shirt front is laid on its side in DLS26 2026 UV atlases
-          d.polygon([(211,131),(437,130),(442,273),(211,272)],fill=(8,35,100))
-          for x in (270,302,335):
-              d.polygon([(x,131),(x+13,131),(x-38,272),(x-51,272)],fill=BLUE if x==302 else (10,72,148))
-          # surrounding short sleeves
-          for poly in [[(3,0),(191,0),(192,128),(3,128)],[(442,0),(508,0),(509,128),(441,128)],
-                       [(0,135),(185,135),(195,275),(0,275)],[(446,136),(512,137),(512,276),(443,275)]]:
-              d.polygon(poly,fill=(8,32,87))
-          for y in (50,68):
-              d.line([(15,y),(187,y)],fill=CYAN,width=8)
-              d.line([(450,y),(505,y)],fill=CYAN,width=8)
-          # Long-sleeve and stocking sections
-          for a,b in [((4,285),(189,379)),((319,285),(509,379))]:
-              d.rectangle((a[0],a[1],b[0],b[1]),fill=(6,32,89))
-              d.line([(a[0],a[1]+14),(b[0],a[1]+14)],fill=CYAN,width=7)
-              d.line([(a[0],a[1]+28),(b[0],a[1]+28)],fill=BLUE,width=4)
-          # Shorts components
-          d.polygon([(3,384),(239,384),(237,505),(0,505)],fill=(6,26,77))
-          d.polygon([(265,384),(507,384),(512,505),(267,505)],fill=(6,26,77))
-          d.polygon([(31,390),(47,390),(103,503),(88,503)],fill=BLUE)
-          d.polygon([(283,390),(295,390),(361,503),(347,503)],fill=BLUE)
-          d.line([(5,501),(235,501)],fill=CYAN,width=5)
-          d.line([(269,501),(507,501)],fill=CYAN,width=5)
-          # Small utility swatches number colors
-          d.rectangle((475,270,499,293),fill=(243,247,255))
-          d.rectangle((475,298,499,319),fill=(243,247,255))
-          # Font setup
+          im=Image.new('RGBA',(S,S),(0,0,0,0)); d=ImageDraw.Draw(im)
+          navy=(8,28,82,255); blue=(10,110,221,255); cyan=(23,188,247,255); white=(255,255,255,255)
+          # Established classic/modern DLS atlas: torso back LEFT, torso front RIGHT, shared central collar.
+          # Top: collars, shirt motifs and short sleeves.
+          d.polygon([(242,0),(327,0),(354,14),(370,7),(377,110),(241,110)],fill=navy)
+          d.polygon([(379,3),(488,3),(502,13),(500,107),(380,109)],fill=navy)
+          # central joined front/back shirts, x=135..352 back, x=375..500 front?  mapped front kept right.
+          d.polygon([(137,126),(343,119),(362,132),(369,125),(375,116),(493,121),(509,261),(375,262),(353,239),(334,265),(137,267)],fill=navy)
+          # Front torso area RIGHT
+          d.polygon([(375,123),(492,125),(506,257),(374,256)],fill=(6,38,105,255))
+          d.polygon([(478,125),(489,125),(505,252),(493,254)],fill=blue)
+          d.polygon([(393,213),(404,212),(454,258),(440,258)],fill=blue)
+          # Back LEFT plain to preserve name and number.
+          d.polygon([(150,134),(332,128),(332,251),(147,256)],fill=navy)
+          d.line([(151,247),(332,247)],fill=(12,88,166,255),width=4)
+          # Sleeves on left in central area
+          d.polygon([(5,128),(96,125),(113,145),(113,232),(94,256),(5,259)],fill=navy)
+          d.polygon([(6,263),(99,262),(111,279),(107,338),(4,340)],fill=navy)
+          for y in (212,221,309):
+              d.line([(10,y),(102,y)],fill=cyan,width=6)
+          # long sleeves below shirt body
+          d.polygon([(141,275),(287,275),(298,300),(290,371),(143,371)],fill=navy)
+          d.polygon([(310,275),(445,274),(459,290),(456,372),(308,374)],fill=navy)
+          for x1,x2 in ((145,284),(315,452)):
+              d.line([(x1,342),(x2,342)],fill=cyan,width=8)
+              d.line([(x1,358),(x2,358)],fill=blue,width=6)
+          # sock and shorts lower region
+          d.polygon([(5,390),(224,390),(240,424),(231,493),(3,494)],fill=navy)
+          d.polygon([(260,391),(480,390),(508,421),(506,492),(268,494)],fill=navy)
+          d.polygon([(25,394),(35,394),(79,490),(65,490)],fill=blue)
+          d.polygon([(472,394),(482,394),(502,480),(494,481)],fill=blue)
+          d.line([(5,485),(228,485)],fill=cyan,width=7)
+          d.line([(271,485),(502,485)],fill=cyan,width=7)
+          # collar rings + number swatches
+          d.ellipse((11,5,50,44),fill=cyan);d.ellipse((20,13,41,36),fill=(0,0,0,0))
+          d.ellipse((10,49,50,89),fill=cyan);d.ellipse((20,58,40,79),fill=(0,0,0,0))
+          d.rectangle((471,334,491,353),fill=white)
+          d.rectangle((471,358,491,378),fill=white)
           font='/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
-          def txt(text,size,fill=(255,255,255,255)):
-              f=ImageFont.truetype(font,size)
-              bb=f.getbbox(text)
-              layer=Image.new('RGBA',(bb[2]-bb[0]+8,bb[3]-bb[1]+8))
-              ImageDraw.Draw(layer).text((4-bb[0],4-bb[1]),text,font=f,fill=fill)
-              return layer
-          # Text rotated because the actual DLS26 shirt-front zone is sideways
-          layer=Image.new('RGBA',(118,170))
-          dl=ImageDraw.Draw(layer)
-          for text,y,size in [('MERCAN KAFE',0,15),('SIFNE',24,20)]:
-              f=ImageFont.truetype(font,size)
-              dl.text((0,y),text,font=f,fill='white')
-          layer=layer.rotate(90,expand=True)
-          layer.thumbnail((78,116),Image.Resampling.LANCZOS)
-          im.alpha_composite(layer,(349,142))
-          # club crest at front chest UV position, rotated 90 degrees
-          crest=Image.new('RGBA',(54,57))
-          cd=ImageDraw.Draw(crest)
-          cd.rounded_rectangle((2,2,50,54),radius=10,fill=(2,18,54),outline=CYAN,width=3)
-          cd.polygon([(9,37),(25,11),(39,37),(26,30)],fill=(245,247,255))
-          cf=ImageFont.truetype(font,8)
-          cd.text((7,41),'ONUR',font=cf,fill='white')
-          crest=crest.rotate(90,expand=True)
-          crest.thumbnail((35,40))
-          im.alpha_composite(crest,(343,210))
-          # portrait image with clipped oval, small and rotated like sponsor (DLS26 UV orientation)
+          def write_rotated(lines,box,angle=90):
+              lay=Image.new('RGBA',(240,140)); draw=ImageDraw.Draw(lay)
+              for i,(s,sz) in enumerate(lines):
+                  f=ImageFont.truetype(font,sz); draw.text((6,9+i*43),s,font=f,fill=white)
+              lay=lay.rotate(angle,expand=True)
+              lay.thumbnail((box[2],box[3]),Image.Resampling.LANCZOS)
+              im.alpha_composite(lay,(box[0],box[1]))
+          # The right-hand front shirt graphic is rotated to face correct way in DLS UV.
+          write_rotated([('MERCAN KAFE',19),('SIFNE',24)],(411,169,67,84),90)
+          # compact front crest, safely away from seams
+          crest=Image.new('RGBA',(40,40));cd=ImageDraw.Draw(crest)
+          cd.rounded_rectangle((3,2,37,38),radius=9,fill=(4,14,49),outline=cyan,width=3)
+          cd.polygon([(9,25),(21,8),(30,25),(21,21)],fill=white)
+          crest=crest.rotate(90,expand=True).resize((25,25))
+          im.alpha_composite(crest,(385,145))
+          # optional portrait kept very small and only on front, preserving sponsor
           try:
-              response=requests.get('https://at.adobe.com/GHVxHP9370Yhf7BS',timeout=30)
-              response.raise_for_status()
-              selfie=Image.open(io.BytesIO(response.content)).convert('RGB')
-              w,h=selfie_size=selfie.size
-              face=selfie.crop((int(w*.30),int(h*.35),int(w*.73),int(h*.78)))
-              face=ImageOps.fit(face,(70,70),method=Image.Resampling.LANCZOS)
-              face=ImageEnhance.Contrast(face).enhance(1.2).convert('RGBA')
-              mask=Image.new('L',(70,70),0)
-              ImageDraw.Draw(mask).ellipse((2,2,68,68),fill=245)
-              face.putalpha(mask)
-              face=face.rotate(90,expand=True).resize((48,48))
-              im.alpha_composite(face,(270,170))
-          except Exception as e: print('Portrait could not load:',e)
-          # number area back left intentionally clean
-          im=im.convert('RGBA')
-          im.save('onurspor-dls-512.png',format='PNG',optimize=True)
+              r=requests.get('https://at.adobe.com/GHVxHP9370Yhf7BS',timeout=25);r.raise_for_status()
+              p=Image.open(io.BytesIO(r.content)).convert('RGB')
+              w,h=p.size;p=p.crop((int(.34*w),int(.37*h),int(.68*w),int(.69*h)))
+              p=ImageOps.fit(p,(52,52)).convert('RGBA')
+              mask=Image.new('L',(52,52),0);ImageDraw.Draw(mask).ellipse((0,0,51,51),fill=255);p.putalpha(mask)
+              p=p.rotate(90).resize((35,35));im.alpha_composite(p,(465,181))
+          except Exception as e: print('portrait unavailable',e)
+          im.save('onurspor-dls-512.png')
           assert Image.open('onurspor-dls-512.png').size==(512,512)
-          print('DLS26 output created')
           PY
-          python3 /tmp/make.py
-      - name: Publish kit
+          python /tmp/render.py
+      - name: Publish
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add onurspor-dls-512.png
           if ! git diff --cached --quiet; then
-            git commit -m 'Generate Onurspor DLS26 UV placement kit'
+            git commit -m 'Correct Onurspor atlas sponsor position'
             git push
           fi
