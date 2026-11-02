@@ -1,8 +1,7 @@
-name: Update Onurspor DLS kit
+name: Publish Onurspor DLS26 template-fixed kit
 on:
   push:
-    paths:
-      - '.github/workflows/update-onurspor-kit.yml'
+    paths: ['.github/workflows/update-onurspor-kit.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -11,22 +10,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Download exact final design
+      - name: Fetch exact 512px DLS26 kit
         run: |
-          curl --fail --location --retry 3 --output onurspor-source.png 'https://at.adobe.com/AaqYmnSq9kANiT1M'
-          test "$(file --mime-type -b onurspor-source.png)" = 'image/png'
-      - name: Resize without redesign to RGBA 512x512
-        run: |
-          python3 -m pip install --quiet pillow
+          curl --fail --location --retry 3 --output onurspor-dls-512.png 'https://at.adobe.com/qQmRw9PnaZsIxAHz'
           python3 - <<'PY'
-          from PIL import Image
-          im = Image.open('onurspor-source.png')
-          assert im.width == im.height, im.size
-          im = im.convert('RGBA').resize((512,512), Image.Resampling.LANCZOS)
-          im.save('onurspor-dls-512.png', format='PNG', optimize=True)
-          verify=Image.open('onurspor-dls-512.png')
-          assert verify.size == (512,512) and verify.mode == 'RGBA'
-          print('Validated', verify.size, verify.mode)
+          import struct
+          with open('onurspor-dls-512.png','rb') as f: raw=f.read(30)
+          assert raw[:8] == b'\x89PNG\r\n\x1a\n'
+          assert struct.unpack('>II',raw[16:24])==(512,512)
+          print('512x512 PNG confirmed')
           PY
       - name: Publish
         run: |
@@ -34,6 +26,6 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add onurspor-dls-512.png
           if ! git diff --cached --quiet; then
-            git commit -m 'Publish exact Onurspor design resized to RGBA 512'
+            git commit -m 'Correct Onurspor DLS26 kit using in-game template mask'
             git push
           fi
